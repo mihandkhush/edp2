@@ -81,8 +81,8 @@ jobs:
           choco install vscode -y
           
           # Install VS Code extensions
-          code --install-extension ms-python.python
-          code --install-extension ms-python.vscode-pylance
+          & "C:\Program Files\Microsoft VS Code\bin\code.cmd" --install-extension ms-python.python
+          & "C:\Program Files\Microsoft VS Code\bin\code.cmd" --install-extension ms-python.vscode-pylance
           
           Write-Host "✅ VS Code installed"
 
@@ -96,6 +96,7 @@ jobs:
           
           # Install silently
           Start-Process -FilePath $mumuPath -ArgumentList "/S" -Wait
+          Start-Sleep -Seconds 30
           
           Write-Host "✅ Mumu Player installed"
 
@@ -129,88 +130,3 @@ jobs:
         run: |
           # Create connection info file
           $infoContent = @"
-RDP Connection Information:
-===========================
-Username: mtqmanik
-Password: ${{ github.event.inputs.rdp_password }}
-Tailscale IP: $env:TAILSCALE_IP
-
-How to connect:
-1. Open Remote Desktop Connection (mstsc)
-2. Enter: $env:TAILSCALE_IP
-3. Username: mtqmanik
-4. Password: [your password]
-
-Installed Software:
-- Python 3.10 with all required modules
-- VS Code with Python extensions
-- Mumu Player 12 Emulator
-- Git, ADB, Node.js
-"@
-          
-          $desktopPath = [Environment]::GetFolderPath("Desktop")
-          $infoContent | Out-File -FilePath "$desktopPath\RDP_Info.txt" -Encoding UTF8
-          
-          # Create test Python script
-          $pythonTest = @"
-import cv2
-import uiautomator2 as u2
-import customtkinter as ctk
-import playwright
-
-print("✅ All Python modules installed successfully!")
-print(f"OpenCV version: {cv2.__version__}")
-
-# Test CustomTkinter
-ctk.set_appearance_mode("dark")
-print("CustomTkinter: OK")
-
-# Test Playwright
-from playwright.sync_api import sync_playwright
-print("Playwright: OK")
-
-print("\n🎉 Setup completed successfully!")
-print("You can now use RDP to connect.")
-"@
-          
-          $pythonTest | Out-File -FilePath "$desktopPath\test_setup.py" -Encoding UTF8
-          
-          Write-Host "✅ Desktop files created"
-
-      - name: Display Connection Info
-        run: |
-          Write-Host "=========================================="
-          Write-Host "🎉 SETUP COMPLETED SUCCESSFULLY!"
-          Write-Host "=========================================="
-          Write-Host ""
-          Write-Host "📋 RDP CONNECTION DETAILS:"
-          Write-Host "Username: mtqmanik"
-          Write-Host "Password: ${{ github.event.inputs.rdp_password }}"
-          Write-Host "Tailscale IP: $env:TAILSCALE_IP"
-          Write-Host ""
-          Write-Host "💻 INSTALLED SOFTWARE:"
-          Write-Host "- Python 3.10 with OpenCV, uiautomator2, Playwright, CustomTkinter"
-          Write-Host "- Visual Studio Code with Python extensions"
-          Write-Host "- Mumu Player 12 Android Emulator"
-          Write-Host "- Git, ADB, Node.js"
-          Write-Host ""
-          Write-Host "📁 On Desktop you will find:"
-          Write-Host "- RDP_Info.txt (connection details)"
-          Write-Host "- test_setup.py (Python test script)"
-          Write-Host ""
-          Write-Host "⏰ This RDP session will remain active for 6 hours"
-          Write-Host "=========================================="
-
-      - name: Keep Session Alive
-        run: |
-          # Keep alive for almost 6 hours (GitHub limit)
-          $endTime = (Get-Date).AddMinutes(355)
-          Write-Host "Session will stay active until: $endTime"
-          
-          while ((Get-Date) -lt $endTime) {
-              $remaining = [math]::Round(($endTime - (Get-Date)).TotalMinutes, 1)
-              Write-Host "Time remaining: $remaining minutes"
-              Start-Sleep -Seconds 300  # Sleep 5 minutes
-          }
-          
-          Write-Host "⏰ Session time completed"
