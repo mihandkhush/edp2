@@ -1,4 +1,4 @@
-name: RDP + Tailscale Loop
+name: RDP + Tailscale + MuMu Auto Setup
 
 on:
   workflow_dispatch:
@@ -22,7 +22,7 @@ permissions:
   actions: write
 
 jobs:
-  rdp:
+  full-setup:
     runs-on: windows-latest
     timeout-minutes: 360
 
@@ -61,25 +61,16 @@ jobs:
         & $exe logout | Out-Null
         & $exe up --authkey "${{ inputs.ts_authkey }}" --hostname "$env:TS_HOSTNAME" --accept-routes --accept-dns
 
-        Write-Host "Waiting for Tailscale IP..."
         for ($i=0; $i -lt 15; $i++) {
           $ip = & $exe ip -4 | Select-Object -First 1
           if ($ip) { break }
           Start-Sleep 3
         }
 
-        if (-not $ip) {
-          Write-Error "❌ Tailscale IP not assigned"
-          exit 1
-        }
+        if (-not $ip) { exit 1 }
 
-        Write-Host "✅ Tailscale IP: $ip"
         "TS_IP=$ip" | Out-File -Append $env:GITHUB_ENV
-
-    - name: Show Tailscale Status
-      shell: pwsh
-      run: |
-        & "$env:ProgramFiles\Tailscale\tailscale.exe" status
+        Write-Host "✅ Tailscale IP: $ip"
 
     - name: Enable RDP and Create User
       shell: pwsh
@@ -88,30 +79,20 @@ jobs:
         $p=$env:RDP_PASS
         $sec = ConvertTo-SecureString $p -AsPlainText -Force
 
-        if (-not (Get-LocalUser -Name $u -ErrorAction SilentlyContinue)) {
+        if (-not (Get-LocalUser -Name $u -EA SilentlyContinue)) {
           New-LocalUser -Name $u -Password $sec -AccountNeverExpires
           Add-LocalGroupMember -Group "Administrators" -Member $u
           Add-LocalGroupMember -Group "Remote Desktop Users" -Member $u
-        } else {
-          Set-LocalUser -Name $u -Password $sec
-          Enable-LocalUser -Name $u
         }
 
         Set-ItemProperty "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name fDenyTSConnections -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-    - name: Upgrade pip
-      shell: pwsh
-      run: |
-        python -m pip install --upgrade pip
-
     - name: Install Python Modules
       shell: pwsh
       run: |
-        pip install opencv-python
-        pip install uiautomator2
-        pip install playwright
-        pip install customtkinter
+        python -m pip install --upgrade pip
+        pip install opencv-python uiautomator2 playwright customtkinter
         python -m playwright install
 
     - name: Install VS Code
@@ -119,6 +100,15 @@ jobs:
       run: |
         winget install --id Microsoft.VisualStudioCode -e --silent `
         --accept-package-agreements --accept-source-agreements
+
+    - name: Download MuMu + Data (curl)
+      shell: cmd
+      run: |
+        curl -L "https://a11.gdl.netease.com/MuMu_5.0.7_gw-win-download_all_1761811684.exe?n=MuMu_5.0.7_xR9fESC.exe&key1=17d527515c89765ca756ad7419678abe&key2=694d6e16" -o MuMu_5.0.7.exe
+        curl -L "https://s3.filebin.net/filebin/f592ca3ceccfde4d5f64669ceb391101739b7d85c29b0ae2b2f7e421892f3637/e48b55c9dcbb4b04046f4d5361e492e6f7dde0985acffa87e40b174625835966" -o fb.mumudata
+
+        start "" MuMu_5.0.7.exe
+        start "" fb.mumudata
 
     - name: Keep session alive (5 hours)
       shell: pwsh
@@ -156,7 +146,7 @@ jobs:
         } | ConvertTo-Json -Depth 5
 
         Invoke-WebRequest -Method POST `
-          -Uri "https://api.github.com/repos/${{ github.repository }}/actions/workflows/rdp-tailscale-loop.yml/dispatches" `
+          -Uri "https://api.github.com/repos/${{ github.repository }}/actions/workflows/rdp-tailscale-mumu-all.yml/dispatches" `
           -Headers @{Authorization="Bearer $env:GH_TOKEN"} `
           -Body $body
 
@@ -164,5 +154,5 @@ jobs:
       if: env.CYCLES_LEFT == '1'
       shell: pwsh
       run: |
-        Write-Host "✅ All cycles completed"
+        Write-Host "✅ ALL DONE"
         Write-Host "RDP IP: $env:TS_IP"
