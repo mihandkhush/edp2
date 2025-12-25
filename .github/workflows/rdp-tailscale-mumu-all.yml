@@ -89,31 +89,6 @@ jobs:
         pip install opencv-python uiautomator2 playwright customtkinter
         python -m playwright install
 
-    # ---------------- VSCODE ----------------
-    - name: Install VS Code
-      shell: pwsh
-      run: |
-        winget install Microsoft.VisualStudioCode -e --silent `
-        --accept-package-agreements --accept-source-agreements
-
-    # ---------------- MUMU DOWNLOAD ----------------
-    - name: Download MuMu + Data (curl)
-      shell: pwsh
-      run: |
-        curl -L `
-        "https://a11.gdl.netease.com/MuMu_5.0.7_gw-win-download_all_1761811684.exe?n=MuMu_5.0.7_xR9fESC.exe&key1=17d527515c89765ca756ad7419678abe&key2=694d6e16" `
-        -o MuMu_5.0.7.exe
-
-        curl -L `
-        "https://s3.filebin.net/filebin/f592ca3ceccfde4d5f64669ceb391101739b7d85c29b0ae2b2f7e421892f3637/e48b55c9dcbb4b04046f4d5361e492e6f7dde0985acffa87e40b174625835966" `
-        -o fb.mumudata
-
-        if (!(Test-Path MuMu_5.0.7.exe)) { throw "MuMu download failed" }
-        if (!(Test-Path fb.mumudata)) { throw "Data download failed" }
-
-        Start-Process MuMu_5.0.7.exe
-        Start-Process fb.mumudata
-
     # ---------------- KEEP ALIVE ----------------
     - name: Keep alive
       shell: pwsh
